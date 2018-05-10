@@ -57,15 +57,19 @@ check_auth(_) ->
     Jwt = jwerl:sign([{client_id, <<"client1">>}, {username, <<"plain">>}, {exp, os:system_time(seconds) + 10}], hs256, <<"emqsecret">>),
     ok = emqttd_access_control:auth(Plain, Jwt),
 
-    %% test with a bad jwt
+    %% test with a bad jwt signing key
     Jwt_Error = jwerl:sign([{client_id, <<"client1">>}, {username, <<"plain">>}], hs256,<<"secret">>),
     {error, token_error} = emqttd_access_control:auth(Plain, Jwt_Error),
+
+    % test with not a jwt
+    {error, token_undefined} = emqttd_access_control:auth(Plain, <<"notajwt">>),
+    
     Result =
     case emqttd:env(allow_anonymous, false) of
         true  -> ok;
         false -> {error, "No auth module to check!"}
-    end,
-    Result = emqttd_access_control:auth(Plain, <<"asd">>).
+    end.
+    %% Result = emqttd_access_control:auth(Plain, <<"asd">>).
 
 start_apps(App) ->
     NewConfig = generate_config(App),

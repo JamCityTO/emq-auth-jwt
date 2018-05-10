@@ -44,7 +44,7 @@ check(#mqtt_client{peername = {IP, _}}, Token, Env) ->
     case IsClientPublic of
       false -> ok;
       true -> case catch jwerl:header(Token) of
-        {'EXIT', _} -> ignore; % Not a JWT Token
+        {'EXIT', _} -> {error,  token_undefined};
         Headers -> verify_token(Headers, Token, Env)
       end
     end.
