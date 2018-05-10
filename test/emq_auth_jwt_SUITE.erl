@@ -50,6 +50,9 @@ check_auth(_) ->
     InternalJWT = "fakejwt",
     ok = emqttd_access_control:auth(InternalClient, InternalJWT),
 
+    %% Test an internal client with an undefined password
+    ok = emqttd_access_control:auth(InternalClient, undefined),
+
     %% Test an external client
     ClientIP = {10,0,0,1}, %% considered as a public client
     ClientPort = 7000,
@@ -62,7 +65,7 @@ check_auth(_) ->
     {error, token_error} = emqttd_access_control:auth(Plain, Jwt_Error),
 
     % test with not a jwt
-    {error, token_undefined} = emqttd_access_control:auth(Plain, <<"notajwt">>),
+    {error, token_error} = emqttd_access_control:auth(Plain, <<"notajwt">>),
     
     Result =
     case emqttd:env(allow_anonymous, false) of

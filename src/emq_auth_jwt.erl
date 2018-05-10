@@ -30,8 +30,10 @@
 init(Env) ->
     {ok, Env}.
 
-check(_Client, undefined, _Env) ->
-    {error, token_undefined};
+%% no-password is valid for internal traffic
+%%check(_Client, undefined, _Env) ->
+%%    {error, token_undefined};
+
 check(#mqtt_client{peername = {IP, _}}, Token, Env) ->
 
     %% Match the client's IP with a few CIDR IP ranges to determine if it's a public client
@@ -43,7 +45,7 @@ check(#mqtt_client{peername = {IP, _}}, Token, Env) ->
     case IsClientPublic of
       false -> ok;
       true -> case catch jwerl:header(Token) of
-        {'EXIT', _} -> {error,  token_undefined};
+        {'EXIT', _} -> {error,  token_error};
         Headers -> verify_token(Headers, Token, Env)
       end
     end.
