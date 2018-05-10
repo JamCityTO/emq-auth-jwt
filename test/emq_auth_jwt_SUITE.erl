@@ -43,9 +43,21 @@ end_per_suite(_Config) ->
     [application:stop(App) || App <- [emq_auth_jwt, emqttd]].
 
 check_auth(_) ->
-    Plain = #mqtt_client{client_id = <<"client1">>, username = <<"plain">>},
+    %% Test an internal client
+    InternalIP = {10,0,5,1},
+    InternalPort = 7000,
+    InternalClient = #mqtt_client{client_id = <<"internalclient1">>, username= <<"internal">>, peername = {InternalIP, InternalPort}},
+    InternalJWT = "fakejwt",
+    ok = emqttd_access_control:auth(InternalClient, InternalJWT),
+
+    %% Test an external client
+    ClientIP = {10,0,0,1}, %% considered as a public client
+    ClientPort = 7000,
+    Plain = #mqtt_client{client_id = <<"client1">>, username = <<"plain">>, peername = {ClientIP, ClientPort}},
     Jwt = jwerl:sign([{client_id, <<"client1">>}, {username, <<"plain">>}, {exp, os:system_time(seconds) + 10}], hs256, <<"emqsecret">>),
     ok = emqttd_access_control:auth(Plain, Jwt),
+
+    %% test with a bad jwt
     Jwt_Error = jwerl:sign([{client_id, <<"client1">>}, {username, <<"plain">>}], hs256,<<"secret">>),
     {error, token_error} = emqttd_access_control:auth(Plain, Jwt_Error),
     Result =

@@ -32,10 +32,21 @@ init(Env) ->
 
 check(_Client, undefined, _Env) ->
     {error, token_undefined};
-check(_Client, Token, Env) ->
-    case catch jwerl:header(Token) of
+check(#mqtt_client{peername = {IP, _}}, Token, Env) ->
+
+    %% Match the client's IP with a few CIDR IP ranges to determine if it's a public client
+    IsClientPublic = esockd_cidr:match(IP, {{10,0,0,0}, {10,0,0,255}, 24})
+      or esockd_cidr:match(IP, {{10,0,1,0}, {10,0,1,255}, 24})
+      or esockd_cidr:match(IP, {{10,0,2,0}, {10,0,2,255}, 24})
+      or esockd_cidr:match(IP, {{127,0,0,1}, {127,0,0,1}, 32}),
+
+    %% Only apply auth checks if the client is public, let internal traffic passthrough
+    case IsClientPublic of
+      false -> ok;
+      true -> case catch jwerl:header(Token) of
         {'EXIT', _} -> ignore; % Not a JWT Token
         Headers -> verify_token(Headers, Token, Env)
+      end
     end.
 
 verify_token(#{alg := <<"HS", _/binary>>}, _Token, #{secret := undefined}) ->
