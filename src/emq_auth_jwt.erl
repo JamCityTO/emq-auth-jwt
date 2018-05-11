@@ -67,7 +67,9 @@ verify_token(Header, _Token, _Env) ->
     {error, token_unsupported}.
 
 verify_token(Token, SecretOrKey) ->
-    case catch jwerl:verify(Token, SecretOrKey, true) of
+    %% jwerl does not base64 decode the key, so we need to do it here first
+    DecodedKey = base64:decode(SecretOrKey),
+    case catch jwerl:verify(Token, DecodedKey, true) of
         {ok, _Claims}  -> ok;
         {error, Reason} ->
             lager:error("JWT decode error:~p", [Reason]),

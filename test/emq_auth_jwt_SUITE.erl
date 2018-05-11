@@ -57,11 +57,13 @@ check_auth(_) ->
     ClientIP = {10,0,0,1}, %% considered as a public client
     ClientPort = 7000,
     Plain = #mqtt_client{client_id = <<"client1">>, username = <<"plain">>, peername = {ClientIP, ClientPort}},
-    Jwt = jwerl:sign([{client_id, <<"client1">>}, {username, <<"plain">>}, {exp, os:system_time(seconds) + 10}], hs256, <<"emqsecret">>),
+    DecodedKey = base64:decode(<<"ZW1xc2VjcmV0">>),
+    Jwt = jwerl:sign([{client_id, <<"client1">>}, {username, <<"plain">>}, {exp, os:system_time(seconds) + 10}], hs256, DecodedKey),
     ok = emqttd_access_control:auth(Plain, Jwt),
 
     %% test with a bad jwt signing key
-    Jwt_Error = jwerl:sign([{client_id, <<"client1">>}, {username, <<"plain">>}], hs256,<<"secret">>),
+    BadDecodedKey = base64:decode(<<"YmFkc2VjcmV0">>),
+    Jwt_Error = jwerl:sign([{client_id, <<"client1">>}, {username, <<"plain">>}], hs256, BadDecodedKey),
     {error, token_error} = emqttd_access_control:auth(Plain, Jwt_Error),
 
     % test with not a jwt
